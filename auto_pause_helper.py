@@ -23,6 +23,7 @@ state = {
     "paused": False,
     "presence": 0.0,
     "face_count": 0,
+    "body_count": 0,
     "skin_ratio": 0.0,
     "last_seen_seconds": None,
     "error": "",
@@ -35,7 +36,7 @@ DEFAULT_SETTINGS = {
     "pause": 3.0,
     "resume": 0.5,
     "interval": 0.12,
-    "presence_threshold": 0.32,
+    "presence_threshold": 0.55,
 }
 
 
@@ -158,6 +159,26 @@ def load_cascade(name):
     return None if cascade.empty() else cascade
 
 
+def resize_for_detection(frame, max_width=640):
+    height, width = frame.shape[:2]
+    if width <= max_width:
+        return frame
+    scale = max_width / float(width)
+    return cv2.resize(frame, (max_width, int(height * scale)), interpolation=cv2.INTER_AREA)
+
+
+def detect_with(cascade, gray, scale=1.06, neighbors=4, min_size=(42, 42)):
+    if cascade is None:
+        return []
+    found = cascade.detectMultiScale(
+        gray,
+        scaleFactor=scale,
+        minNeighbors=neighbors,
+        minSize=min_size,
+    )
+    return list(found)
+
+
 def skin_ratio(frame):
     height, width = frame.shape[:2]
     roi = frame[int(height * 0.10):int(height * 0.92), int(width * 0.18):int(width * 0.82)]
@@ -167,11 +188,15 @@ def skin_ratio(frame):
 
 
 def detect_loop(args):
-    frontal = load_cascade("haarcascade_frontalface_default.xml")
+    face_cascades = [
+        load_cascade("haarcascade_frontalface_default.xml"),
+        load_cascade("haarcascade_frontalface_alt.xml"),
+        load_cascade("haarcascade_frontalface_alt2.xml"),
+    ]
     profile = load_cascade("haarcascade_profileface.xml")
+    upperbody = load_cascade("haarcascade_upperbody.xml")
     cap = None
     active_camera = None
-    skin_baseline = 0.0
     last_seen = time.monotonic()
     last_missing = None
     present_since = time.monotonic()
@@ -189,6 +214,7 @@ def detect_loop(args):
                         "paused": paused,
                         "presence": 0.0,
                         "face_count": 0,
+                        "body_count": 0,
                         "skin_ratio": 0.0,
                         "last_seen_seconds": round(now - last_seen, 2) if last_seen else None,
                         "error": "Waiting for a camera feed. If OBS uses the webcam, start OBS Virtual Camera; the helper will connect automatically.",
@@ -196,7 +222,6 @@ def detect_loop(args):
                 time.sleep(2.0)
                 continue
 
-            skin_baseline = 0.0
             with state_lock:
                 state.update({
                     "camera_ok": True,
@@ -220,29 +245,27 @@ def detect_loop(args):
             time.sleep(1.0)
             continue
 
-        frame = cv2.resize(frame, (640, 360))
+        frame = resize_for_detection(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
 
         faces = []
-        if frontal is not None:
-            faces.extend(frontal.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=5, minSize=(42, 42)))
+        for cascade in face_cascades:
+            faces.extend(detect_with(cascade, gray, scale=1.06, neighbors=4, min_size=(38, 38)))
         if profile is not None:
-            faces.extend(profile.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=5, minSize=(42, 42)))
+            faces.extend(detect_with(profile, gray, scale=1.08, neighbors=4, min_size=(42, 42)))
             flipped = cv2.flip(gray, 1)
-            faces.extend(profile.detectMultiScale(flipped, scaleFactor=1.08, minNeighbors=5, minSize=(42, 42)))
+            faces.extend(detect_with(profile, flipped, scale=1.08, neighbors=4, min_size=(42, 42)))
+
+        bodies = detect_with(upperbody, gray, scale=1.08, neighbors=5, min_size=(90, 90))
 
         current_skin = skin_ratio(frame)
         face_count = len(faces)
-        if face_count:
-            skin_baseline = max(current_skin, skin_baseline * 0.92 + current_skin * 0.08)
-
-        skin_presence = 0.0
-        if skin_baseline > 0.005:
-            skin_presence = clamp(current_skin / max(0.012, skin_baseline * 0.48), 0.0, 1.0)
-
+        body_count = len(bodies)
         face_presence = 1.0 if face_count else 0.0
-        confidence = clamp(face_presence * 0.82 + skin_presence * 0.34, 0.0, 1.0)
+        body_presence = 0.72 if body_count else 0.0
+        skin_presence = 0.24 if current_skin >= 0.035 else 0.0
+        confidence = clamp(max(face_presence, body_presence, skin_presence), 0.0, 1.0)
         present = confidence >= args.presence_threshold
 
         if present:
@@ -266,6 +289,7 @@ def detect_loop(args):
                 "paused": paused,
                 "presence": round(confidence, 3),
                 "face_count": face_count,
+                "body_count": body_count,
                 "skin_ratio": round(current_skin, 4),
                 "last_seen_seconds": round(now - last_seen, 2),
                 "error": "",

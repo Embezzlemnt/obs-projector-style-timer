@@ -4,5 +4,5 @@
   "pause": 3.0,
   "resume": 0.5,
   "interval": 0.12,
-  "presence_threshold": 0.32
+  "presence_threshold": 0.55
 }
