@@ -1,17 +1,16 @@
 OBS PROJECTOR STYLE TIMER
 
-1. Open OBS.
-2. If OBS already uses your webcam, click Start Virtual Camera.
-3. Double-click setup-auto-pause.bat.
-4. Pick the number from the preview image that shows the camera feed you want.
-5. In OBS, add a Browser Source and choose obs-projector-timer.html as the local file.
+1. Double-click INSTALL - OBS Projector Timer.bat.
+2. Open OBS.
+3. Add a Browser Source and choose obs-projector-timer.html as the local file.
 
-Daily use:
-Double-click start-helper-hidden.vbs, then open OBS.
+That is it. The helper starts quietly with Windows after install.
 
-Check auto-pause:
-Double-click check-status.bat.
-You want camera_ok: true.
+If OBS already uses your webcam, click Start Virtual Camera in OBS.
+The helper finds the camera feed automatically.
+
+To stop the background helper:
+Double-click stop-helper.bat.
 
 Controls in OBS Interact:
 1-5 = dim to ultra

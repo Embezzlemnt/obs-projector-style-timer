@@ -4,80 +4,39 @@ A local OBS Browser Source timer that looks like cool-white projector light on a
 
 No video is uploaded. The helper only exposes local status at `127.0.0.1`.
 
-## Install Once
+## Install
 
 1. Download this repo as a ZIP and extract it.
-2. Install Python 3.
-3. Install OpenCV:
+2. Double-click `INSTALL - OBS Projector Timer.bat`.
+3. Open OBS.
+4. Add a `Browser Source`.
+5. Enable `Local file`.
+6. Select `obs-projector-timer.html`.
+7. Set width/height to your canvas, usually `1920 x 1080`.
 
-```bat
-pip install opencv-python
-```
-
-4. Open OBS.
-5. If OBS already uses your webcam, click `Start Virtual Camera`.
-6. Double-click `setup-auto-pause.bat`.
-7. A `camera-previews` folder opens.
-8. Pick the number from the image that shows the camera feed you want.
-   Example: if `camera-index-1.jpg` is correct, type `1`.
-9. In OBS, add a `Browser Source`.
-10. Enable `Local file`.
-11. Select `obs-projector-timer.html`.
-12. Set width/height to your canvas, usually `1920 x 1080`.
+The installer starts the helper quietly and adds it to Windows startup. It uses automatic camera detection; you do not need to choose a camera number.
 
 The timer starts fresh at `00:00:00` when the browser source loads.
 
 ## Daily Use
 
-1. Open OBS.
-2. Start OBS Virtual Camera if your webcam is already used in OBS.
-3. Double-click `start-helper-hidden.vbs`.
+Open OBS. The helper should already be running in the background.
 
-That is it. The helper runs quietly in the background.
+If OBS is already using your webcam, click `Start Virtual Camera` in OBS. The helper keeps trying quietly until it finds a working camera feed.
 
-To make the helper start with Windows, run:
+To stop the background helper, double-click `stop-helper.bat`.
 
-```text
-install-autostart.bat
-```
+## Auto-Pause
 
-## Check Auto-Pause
+Step fully out of frame for about 3 seconds. The timer pauses and shows `bathroom break`. It resumes when you return.
 
-Run:
+To check the helper, double-click `check-status.bat`.
 
-```text
-check-status.bat
-```
+Good status: `camera_ok` is `true`.
 
-Good:
+Waiting status: the helper is running, but no camera feed is available yet. Start OBS Virtual Camera if OBS owns the webcam.
 
-```json
-"camera_ok": true
-```
-
-Then step fully out of frame for about 3 seconds. The timer should pause and show `bathroom break`. It resumes when you return.
-
-## Camera Number
-
-A camera number is the number the helper uses to open a camera-like device.
-
-```text
-0 = maybe your webcam
-1 = maybe OBS Virtual Camera
-2 = maybe another camera/capture device
-```
-
-Do not guess. Use `setup-auto-pause.bat`, then choose by preview image:
-
-```text
-camera-index-0.jpg
-camera-index-1.jpg
-camera-index-2.jpg
-```
-
-Pick the image that shows the feed you want the helper to watch.
-
-## OBS Interact Controls
+## Controls
 
 Right-click the Browser Source and choose `Interact`.
 
@@ -100,11 +59,10 @@ R = reset timer to 00:00:00
 If auto-pause does not work:
 
 1. Start OBS Virtual Camera.
-2. Run `setup-auto-pause.bat`.
-3. Pick the correct preview image number.
-4. Run `check-status.bat`.
+2. Double-click `check-status.bat`.
+3. If it is still waiting, double-click `INSTALL - OBS Projector Timer.bat` again.
 
-If `camera_ok` is still false, choose a different preview image number or close other apps using the webcam.
+`find-camera-indexes.bat` is only for advanced troubleshooting. Normal setup does not require camera numbers.
 
 ## Optional Saved Timer
 

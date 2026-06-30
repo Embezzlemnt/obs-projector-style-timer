@@ -1,5 +1,5 @@
 ﻿{
-  "camera": 0,
+  "camera": "auto",
   "port": 8765,
   "pause": 3.0,
   "resume": 0.5,

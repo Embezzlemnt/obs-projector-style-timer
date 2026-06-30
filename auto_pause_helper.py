@@ -19,6 +19,7 @@ except Exception:
 state_lock = threading.Lock()
 state = {
     "camera_ok": False,
+    "camera": "auto",
     "paused": False,
     "presence": 0.0,
     "face_count": 0,
@@ -29,7 +30,7 @@ state = {
 
 
 DEFAULT_SETTINGS = {
-    "camera": 0,
+    "camera": "auto",
     "port": 8765,
     "pause": 3.0,
     "resume": 0.5,
@@ -64,6 +65,29 @@ def load_settings():
     return settings
 
 
+def parse_camera_setting(value):
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in ("", "auto", "default", "any"):
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def camera_candidates(preferred):
+    chosen = parse_camera_setting(preferred)
+    numbers = []
+    if chosen is not None:
+        numbers.append(chosen)
+    for index in range(9):
+        if index not in numbers:
+            numbers.append(index)
+    return numbers
+
+
 def open_camera(index):
     backends = []
     if hasattr(cv2, "CAP_DSHOW"):
@@ -83,6 +107,14 @@ def open_camera(index):
                 return cap
             cap.release()
     return None
+
+
+def open_first_available_camera(preferred):
+    for index in camera_candidates(preferred):
+        cap = open_camera(index)
+        if cap is not None:
+            return index, cap
+    return None, None
 
 
 def read_frame(index):
@@ -137,38 +169,55 @@ def skin_ratio(frame):
 def detect_loop(args):
     frontal = load_cascade("haarcascade_frontalface_default.xml")
     profile = load_cascade("haarcascade_profileface.xml")
-    cap = open_camera(args.camera)
-
-    if cap is None:
-        with state_lock:
-            state.update({
-                "camera_ok": False,
-                "paused": False,
-                "presence": 0.0,
-                "error": f"Could not open camera number {args.camera}. Run setup-auto-pause.bat, choose another preview image number, or close apps using the webcam.",
-            })
-        return
-
+    cap = None
+    active_camera = None
     skin_baseline = 0.0
     last_seen = time.monotonic()
     last_missing = None
     present_since = time.monotonic()
     paused = False
 
-    with state_lock:
-        state.update({"camera_ok": True, "error": ""})
-
     while True:
+        if cap is None:
+            active_camera, cap = open_first_available_camera(args.camera)
+            if cap is None:
+                now = time.monotonic()
+                with state_lock:
+                    state.update({
+                        "camera_ok": False,
+                        "camera": "searching",
+                        "paused": paused,
+                        "presence": 0.0,
+                        "face_count": 0,
+                        "skin_ratio": 0.0,
+                        "last_seen_seconds": round(now - last_seen, 2) if last_seen else None,
+                        "error": "Waiting for a camera feed. If OBS uses the webcam, start OBS Virtual Camera; the helper will connect automatically.",
+                    })
+                time.sleep(2.0)
+                continue
+
+            skin_baseline = 0.0
+            with state_lock:
+                state.update({
+                    "camera_ok": True,
+                    "camera": active_camera,
+                    "error": "",
+                })
+
         ok, frame = cap.read()
         now = time.monotonic()
 
         if not ok:
+            cap.release()
+            cap = None
             with state_lock:
                 state.update({
                     "camera_ok": False,
-                    "error": "Camera frame read failed.",
+                    "camera": "reconnecting",
+                    "presence": 0.0,
+                    "error": "Camera feed paused or became busy. Reconnecting automatically.",
                 })
-            time.sleep(0.25)
+            time.sleep(1.0)
             continue
 
         frame = cv2.resize(frame, (640, 360))
@@ -213,6 +262,7 @@ def detect_loop(args):
         with state_lock:
             state.update({
                 "camera_ok": True,
+                "camera": active_camera,
                 "paused": paused,
                 "presence": round(confidence, 3),
                 "face_count": face_count,
@@ -251,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     defaults = load_settings()
     parser = argparse.ArgumentParser(description="Camera-based auto-pause helper for OBS timer.")
-    parser.add_argument("--camera", type=int, default=int(defaults["camera"]), help="Camera number. Run setup-auto-pause.bat if you are not sure.")
+    parser.add_argument("--camera", default=str(defaults["camera"]), help="Camera number or auto. Default: auto.")
     parser.add_argument("--scan", action="store_true", help="Scan camera numbers 0-8 and exit.")
     parser.add_argument("--save-previews", action="store_true", help="Save preview JPGs for available camera numbers during scan.")
     parser.add_argument("--port", type=int, default=int(defaults["port"]), help="Local HTTP port.")
@@ -300,7 +350,7 @@ def main():
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print(f"OBS auto-pause helper running: http://127.0.0.1:{args.port}/state")
-    print(f"Camera number: {args.camera} | pause: {args.pause}s | resume: {args.resume}s")
+    print(f"Camera: {args.camera} | pause: {args.pause}s | resume: {args.resume}s")
     print("Leave this window open while OBS is running. Press Ctrl+C to stop.")
     server.serve_forever()
 
