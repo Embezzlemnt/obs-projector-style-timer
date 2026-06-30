@@ -406,6 +406,7 @@
         const storageKey = "obs-projector-desk-time-ms-v1";
         const demoSeconds = Number(params.get("demoSeconds") || 0);
         const demoMode = preview || demoSeconds > 0;
+        const saveTimer = params.get("save") === "1" || params.get("persist") === "1";
         const lightProfiles = {
           day: {
             core: [0.32, 0.46],
@@ -455,7 +456,7 @@
         };
         let brightnessMode = resolveMode(modeInput);
         let profile = lightProfiles[brightnessMode] || lightProfiles.boost;
-        let activeMs = demoSeconds > 0 ? demoSeconds * 1000 : Number(localStorage.getItem(storageKey) || 0);
+        let activeMs = demoSeconds > 0 ? demoSeconds * 1000 : saveTimer ? Number(localStorage.getItem(storageKey) || 0) : 0;
         let lastTick = performance.now();
         let lastSave = 0;
         let paused = forceBreak;
@@ -554,7 +555,7 @@
         function handleControlKey(event) {
           const key = event.key;
           const code = event.code;
-          const handledKeys = ["0", "1", "2", "3", "4", "5", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "."];
+          const handledKeys = ["0", "1", "2", "3", "4", "5", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", ".", "r", "R"];
           if (!handledKeys.includes(key)) return;
           event.preventDefault();
 
@@ -570,6 +571,9 @@
           else if (key === "0" || key === ".") {
             manualPause = !manualPause;
             setPaused(manualPause, "manual");
+          } else if (key === "r" || key === "R") {
+            activeMs = 0;
+            localStorage.removeItem(storageKey);
           }
         }
 
@@ -855,7 +859,7 @@
           bloomTimer.textContent = display;
           root.style.setProperty("--break-alpha", paused ? "0.76" : "0");
 
-          if (!demoMode && now - lastSave > 1200) {
+          if (saveTimer && !demoMode && now - lastSave > 1200) {
             localStorage.setItem(storageKey, String(Math.floor(activeMs)));
             lastSave = now;
           }

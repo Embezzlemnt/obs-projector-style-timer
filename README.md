@@ -1,66 +1,47 @@
 # OBS Projector Style Timer
 
-A premium OBS Browser Source timer that looks like cool-white projector light cast onto a gray wall. It includes soft bloom, optical blur, feathered wall wash, keyboard controls, and an optional local auto-pause helper for bathroom breaks.
+A local OBS Browser Source timer that looks like cool-white projector light on a gray wall. It includes five brightness levels, bloom/blur controls, and optional auto-pause when you leave frame.
 
-The timer itself is a local HTML file. Auto-pause is handled by a small local Python helper because OBS Browser Sources often cannot access the same webcam OBS is already using.
+No video is uploaded. The helper only exposes local status at `127.0.0.1`.
 
-## What You Get
+## Install Once
 
-- Projector-style `DESK TIME` timer for OBS
-- Five brightness levels for different room lighting
-- Bloom and blur controls from OBS Interact
-- Automatic pause when you leave frame
-- `bathroom break` text while paused
-- Quiet background helper with no command window
-- No cloud service, no tracking, no network dependency beyond local `127.0.0.1`
-
-## Requirements
-
-- Windows
-- OBS Studio
-- Python 3
-- OpenCV for Python:
+1. Download this repo as a ZIP and extract it.
+2. Install Python 3.
+3. Install OpenCV:
 
 ```bat
 pip install opencv-python
 ```
 
-## Quick Setup
+4. Open OBS.
+5. If OBS already uses your webcam, click `Start Virtual Camera`.
+6. Double-click `setup-auto-pause.bat`.
+7. A `camera-previews` folder opens.
+8. Pick the number from the image that shows the camera feed you want.
+   Example: if `camera-index-1.jpg` is correct, type `1`.
+9. In OBS, add a `Browser Source`.
+10. Enable `Local file`.
+11. Select `obs-projector-timer.html`.
+12. Set width/height to your canvas, usually `1920 x 1080`.
 
-1. Download this repository as a ZIP and extract it.
-2. Open OBS.
-3. If OBS already uses your webcam, click `Start Virtual Camera` in OBS.
-4. Double-click `setup-auto-pause.bat`.
-5. Look at the preview images it opens.
-6. Choose the number whose preview image shows the feed you want.
-7. In OBS, add a `Browser Source`.
-8. Enable `Local file`.
-9. Select `obs-projector-timer.html`.
-10. Set width/height to your OBS canvas, usually `1920 x 1080`.
-
-The setup script starts the auto-pause helper quietly in the background.
+The timer starts fresh at `00:00:00` when the browser source loads.
 
 ## Daily Use
 
-Before recording or streaming:
-
 1. Open OBS.
-2. Make sure OBS Virtual Camera is started if your physical webcam is already used in OBS.
+2. Start OBS Virtual Camera if your webcam is already used in OBS.
 3. Double-click `start-helper-hidden.vbs`.
 
-To make the helper start with Windows, double-click:
+That is it. The helper runs quietly in the background.
+
+To make the helper start with Windows, run:
 
 ```text
 install-autostart.bat
 ```
 
-To remove startup:
-
-```text
-remove-autostart.bat
-```
-
-## Auto-Pause Test
+## Check Auto-Pause
 
 Run:
 
@@ -68,35 +49,25 @@ Run:
 check-status.bat
 ```
 
-You want:
+Good:
 
 ```json
 "camera_ok": true
 ```
 
-Then walk fully out of frame for about 3 seconds. The timer should pause and display:
+Then step fully out of frame for about 3 seconds. The timer should pause and show `bathroom break`. It resumes when you return.
+
+## Camera Number
+
+A camera number is the number the helper uses to open a camera-like device.
 
 ```text
-bathroom break
-```
-
-When you return, it should resume.
-
-## What Is A Camera Index?
-
-A camera index is just the number OpenCV/Windows uses to open a camera-like device.
-
-Examples:
-
-```text
-0 = maybe your physical webcam
+0 = maybe your webcam
 1 = maybe OBS Virtual Camera
-2 = maybe another capture device
+2 = maybe another camera/capture device
 ```
 
-Windows does not always expose friendly camera names to OpenCV, and the order can change when OBS Virtual Camera starts or stops. That is why the setup script scans indexes and saves preview images.
-
-When `setup-auto-pause.bat` opens the `camera-previews` folder, pick the number in the image filename:
+Do not guess. Use `setup-auto-pause.bat`, then choose by preview image:
 
 ```text
 camera-index-0.jpg
@@ -104,13 +75,11 @@ camera-index-1.jpg
 camera-index-2.jpg
 ```
 
-Choose the index whose preview shows the feed you want the helper to watch. If OBS is using your real webcam, start OBS Virtual Camera and choose the preview that shows the OBS Virtual Camera output.
+Pick the image that shows the feed you want the helper to watch.
 
 ## OBS Interact Controls
 
-Right-click the Browser Source in OBS and choose `Interact`.
-
-Use:
+Right-click the Browser Source and choose `Interact`.
 
 ```text
 1 = dim / night
@@ -118,52 +87,31 @@ Use:
 3 = bright / day
 4 = strong projector
 5 = ultra projector
-Arrow Up = one level brighter
-Arrow Down = one level dimmer
+Arrow Up = brighter
+Arrow Down = dimmer
 Arrow Right = more bloom and blur
 Arrow Left = less bloom and blur
-0 = manual bathroom break toggle
+0 = manual bathroom break
+R = reset timer to 00:00:00
 ```
 
-The controls are silent. No debug text appears on stream.
-
-## Troubleshooting Auto-Pause
+## Troubleshooting
 
 If auto-pause does not work:
 
-1. In OBS, click `Start Virtual Camera`.
+1. Start OBS Virtual Camera.
 2. Run `setup-auto-pause.bat`.
-3. Look at the preview images.
-4. Choose the index whose preview shows the right feed.
-5. Run `check-status.bat`.
+3. Pick the correct preview image number.
+4. Run `check-status.bat`.
 
-If `camera_ok` is false, choose another available camera index.
+If `camera_ok` is still false, choose a different preview image number or close other apps using the webcam.
 
-If every camera index is unavailable, another app may have exclusive control of the camera. Close camera apps, restart OBS Virtual Camera, and run setup again.
+## Optional Saved Timer
 
-## Settings
-
-`timer-helper-settings.json` controls the helper:
-
-```json
-{
-  "camera": 0,
-  "port": 8765,
-  "pause": 3.0,
-  "resume": 0.5,
-  "interval": 0.12,
-  "presence_threshold": 0.32
-}
-```
-
-Most users only need to change `camera`, and `setup-auto-pause.bat` does that for you.
-
-## Safety
-
-The helper only serves a tiny local status JSON at:
+By default, the timer starts fresh each load. To keep elapsed time between reloads, add this to the OBS Browser Source URL:
 
 ```text
-http://127.0.0.1:8765/state
+?save=1
 ```
 
-It does not upload video or send camera data anywhere.
+Most users should leave this off.

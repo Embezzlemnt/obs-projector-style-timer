@@ -145,7 +145,7 @@ def detect_loop(args):
                 "camera_ok": False,
                 "paused": False,
                 "presence": 0.0,
-                "error": f"Could not open camera index {args.camera}. Try --camera 1 or close apps using the webcam.",
+                "error": f"Could not open camera number {args.camera}. Run setup-auto-pause.bat, choose another preview image number, or close apps using the webcam.",
             })
         return
 
@@ -251,9 +251,9 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     defaults = load_settings()
     parser = argparse.ArgumentParser(description="Camera-based auto-pause helper for OBS timer.")
-    parser.add_argument("--camera", type=int, default=int(defaults["camera"]), help="Camera index. Try 1 or 2 if 0 is busy.")
-    parser.add_argument("--scan", action="store_true", help="Scan camera indexes 0-8 and exit.")
-    parser.add_argument("--save-previews", action="store_true", help="Save preview JPGs for available camera indexes during scan.")
+    parser.add_argument("--camera", type=int, default=int(defaults["camera"]), help="Camera number. Run setup-auto-pause.bat if you are not sure.")
+    parser.add_argument("--scan", action="store_true", help="Scan camera numbers 0-8 and exit.")
+    parser.add_argument("--save-previews", action="store_true", help="Save preview JPGs for available camera numbers during scan.")
     parser.add_argument("--port", type=int, default=int(defaults["port"]), help="Local HTTP port.")
     parser.add_argument("--pause", type=float, default=float(defaults["pause"]), help="Seconds out of frame before pausing.")
     parser.add_argument("--resume", type=float, default=float(defaults["resume"]), help="Seconds in frame before resuming.")
@@ -271,7 +271,7 @@ def main():
         else:
             print("No Windows camera/video device names found.")
             print("")
-        print("Scanning camera indexes 0-8...")
+        print("Scanning camera numbers 0-8...")
         preview_dir = Path(__file__).with_name("camera-previews")
         if args.save_previews:
             preview_dir.mkdir(exist_ok=True)
@@ -285,14 +285,14 @@ def main():
             else:
                 print(f"{index}: available")
                 if args.save_previews:
-                    label = f"camera index {index}"
+                    label = f"camera number {index}"
                     cv2.putText(frame, label, (20, 42), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 3, cv2.LINE_AA)
                     cv2.imwrite(str(preview_dir / f"camera-index-{index}.jpg"), frame)
 
         if args.save_previews:
             print("")
             print(f"Preview images saved to: {preview_dir}")
-            print("Open that folder and choose the index whose image shows the feed you want.")
+            print("Open that folder and choose the number whose image shows the feed you want.")
         return
 
     worker = threading.Thread(target=detect_loop, args=(args,), daemon=True)
@@ -300,7 +300,7 @@ def main():
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print(f"OBS auto-pause helper running: http://127.0.0.1:{args.port}/state")
-    print(f"Camera index: {args.camera} | pause: {args.pause}s | resume: {args.resume}s")
+    print(f"Camera number: {args.camera} | pause: {args.pause}s | resume: {args.resume}s")
     print("Leave this window open while OBS is running. Press Ctrl+C to stop.")
     server.serve_forever()
 
