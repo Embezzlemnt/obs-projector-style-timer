@@ -1,12 +1,16 @@
 import argparse
+import contextlib
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")
 import cv2
 
 
@@ -42,6 +46,27 @@ DEFAULT_SETTINGS = {
 
 def clamp(value, low, high):
     return max(low, min(high, value))
+
+
+@contextlib.contextmanager
+def muted_native_stderr(enabled=True):
+    if not enabled:
+        yield
+        return
+
+    try:
+        sys.stderr.flush()
+        saved = os.dup(2)
+        with open(os.devnull, "w", encoding="utf-8") as devnull:
+            os.dup2(devnull.fileno(), 2)
+            try:
+                yield
+            finally:
+                sys.stderr.flush()
+                os.dup2(saved, 2)
+                os.close(saved)
+    except Exception:
+        yield
 
 
 def load_settings():
@@ -98,12 +123,15 @@ def open_camera(index):
     backends.append(0)
 
     for backend in backends:
-        cap = cv2.VideoCapture(index, backend) if backend else cv2.VideoCapture(index)
-        if cap.isOpened():
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-            cap.set(cv2.CAP_PROP_FPS, 15)
-            ok, _ = cap.read()
+        with muted_native_stderr():
+            cap = cv2.VideoCapture(index, backend) if backend else cv2.VideoCapture(index)
+            opened = cap.isOpened()
+        if opened:
+            with muted_native_stderr():
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+                cap.set(cv2.CAP_PROP_FPS, 15)
+                ok, _ = cap.read()
             if ok:
                 return cap
             cap.release()
