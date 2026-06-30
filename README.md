@@ -7,7 +7,7 @@ No video is uploaded. The helper only exposes local status at `127.0.0.1`.
 ## Install
 
 1. Download this repo as a ZIP and extract it.
-2. Double-click `INSTALL - OBS Projector Timer.bat`.
+2. Double-click `START HERE - OBS Projector Timer.bat`.
 3. Open OBS.
 4. Add a `Browser Source`.
 5. Enable `Local file`.
@@ -50,7 +50,7 @@ Arrow Up = brighter
 Arrow Down = dimmer
 Arrow Right = more bloom and blur
 Arrow Left = less bloom and blur
-0 = manual bathroom break
+0 = manual bathroom break on / off
 R = reset timer to 00:00:00
 ```
 

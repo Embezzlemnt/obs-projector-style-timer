@@ -1,6 +1,6 @@
 OBS PROJECTOR STYLE TIMER
 
-1. Double-click INSTALL - OBS Projector Timer.bat.
+1. Double-click START HERE - OBS Projector Timer.bat.
 2. Open OBS.
 3. Add a Browser Source and choose obs-projector-timer.html as the local file.
 
@@ -16,5 +16,5 @@ Controls in OBS Interact:
 1-5 = dim to ultra
 Arrow Up / Down = brighter / dimmer
 Arrow Right / Left = more / less bloom and blur
-0 = bathroom break
+0 = bathroom break on / off
 R = reset timer

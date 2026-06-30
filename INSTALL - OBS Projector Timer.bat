@@ -9,21 +9,29 @@ echo.
 echo Setting up the quiet background helper...
 echo.
 
+set "PYTHON_CMD="
 where python >nul 2>nul
-if errorlevel 1 (
+if not errorlevel 1 set "PYTHON_CMD=python"
+if not defined PYTHON_CMD (
+  where py >nul 2>nul
+  if not errorlevel 1 set "PYTHON_CMD=py -3"
+)
+
+if not defined PYTHON_CMD (
   echo Python was not found.
-  echo Install Python 3 from https://www.python.org/downloads/
+  echo Opening the Python download page now.
   echo During install, check "Add Python to PATH", then run this file again.
+  start "" "https://www.python.org/downloads/"
   echo.
   pause
   exit /b 1
 )
 
-python -c "import cv2" >nul 2>nul
+%PYTHON_CMD% -c "import cv2" >nul 2>nul
 if errorlevel 1 (
   echo Installing the camera helper package. This can take a minute...
-  python -m pip install --upgrade pip >nul 2>nul
-  python -m pip install opencv-python >nul
+  %PYTHON_CMD% -m pip install --upgrade pip >nul 2>nul
+  %PYTHON_CMD% -m pip install opencv-python >nul
   if errorlevel 1 (
     echo Setup could not install the camera package.
     echo Check your internet connection, then run this file again.
@@ -41,7 +49,7 @@ set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 copy /Y "%~dp0start-helper-hidden.vbs" "%STARTUP%\OBS Projector Timer Helper.vbs" >nul
 
 wscript "%~dp0start-helper-hidden.vbs"
-timeout /t 3 >nul
+powershell -NoProfile -Command "Start-Sleep -Seconds 3" >nul
 
 echo.
 echo Setup is ready.
@@ -53,4 +61,4 @@ echo The helper will keep trying quietly until it sees a camera feed.
 echo.
 echo To stop it later, double-click stop-helper.bat.
 echo.
-pause
+powershell -NoProfile -Command "Start-Sleep -Seconds 5" >nul

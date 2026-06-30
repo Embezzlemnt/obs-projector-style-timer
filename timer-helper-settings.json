@@ -1,8 +1,8 @@
 ﻿{
-  "camera": "auto",
-  "port": 8765,
-  "pause": 3.0,
-  "resume": 0.5,
-  "interval": 0.12,
-  "presence_threshold": 0.55
+    "camera":  "auto",
+    "port":  8765,
+    "pause":  3,
+    "resume":  0.5,
+    "interval":  0.12,
+    "presence_threshold":  0.55
 }
