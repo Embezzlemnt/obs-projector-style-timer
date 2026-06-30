@@ -85,6 +85,21 @@ def open_camera(index):
     return None
 
 
+def read_frame(index):
+    cap = open_camera(index)
+    if cap is None:
+        return None
+    try:
+        for _ in range(5):
+            ok, frame = cap.read()
+            if ok:
+                return frame
+            time.sleep(0.05)
+        return None
+    finally:
+        cap.release()
+
+
 def windows_camera_names():
     command = [
         "powershell",
@@ -238,6 +253,7 @@ def main():
     parser = argparse.ArgumentParser(description="Camera-based auto-pause helper for OBS timer.")
     parser.add_argument("--camera", type=int, default=int(defaults["camera"]), help="Camera index. Try 1 or 2 if 0 is busy.")
     parser.add_argument("--scan", action="store_true", help="Scan camera indexes 0-8 and exit.")
+    parser.add_argument("--save-previews", action="store_true", help="Save preview JPGs for available camera indexes during scan.")
     parser.add_argument("--port", type=int, default=int(defaults["port"]), help="Local HTTP port.")
     parser.add_argument("--pause", type=float, default=float(defaults["pause"]), help="Seconds out of frame before pausing.")
     parser.add_argument("--resume", type=float, default=float(defaults["resume"]), help="Seconds in frame before resuming.")
@@ -256,13 +272,27 @@ def main():
             print("No Windows camera/video device names found.")
             print("")
         print("Scanning camera indexes 0-8...")
+        preview_dir = Path(__file__).with_name("camera-previews")
+        if args.save_previews:
+            preview_dir.mkdir(exist_ok=True)
+            for old_preview in preview_dir.glob("camera-index-*.jpg"):
+                old_preview.unlink(missing_ok=True)
+
         for index in range(9):
-            cap = open_camera(index)
-            if cap is None:
+            frame = read_frame(index)
+            if frame is None:
                 print(f"{index}: unavailable")
             else:
                 print(f"{index}: available")
-                cap.release()
+                if args.save_previews:
+                    label = f"camera index {index}"
+                    cv2.putText(frame, label, (20, 42), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 3, cv2.LINE_AA)
+                    cv2.imwrite(str(preview_dir / f"camera-index-{index}.jpg"), frame)
+
+        if args.save_previews:
+            print("")
+            print(f"Preview images saved to: {preview_dir}")
+            print("Open that folder and choose the index whose image shows the feed you want.")
         return
 
     worker = threading.Thread(target=detect_loop, args=(args,), daemon=True)

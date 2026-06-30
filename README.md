@@ -31,11 +31,12 @@ pip install opencv-python
 2. Open OBS.
 3. If OBS already uses your webcam, click `Start Virtual Camera` in OBS.
 4. Double-click `setup-auto-pause.bat`.
-5. Choose an available camera index when prompted.
-6. In OBS, add a `Browser Source`.
-7. Enable `Local file`.
-8. Select `obs-projector-timer.html`.
-9. Set width/height to your OBS canvas, usually `1920 x 1080`.
+5. Look at the preview images it opens.
+6. Choose the number whose preview image shows the feed you want.
+7. In OBS, add a `Browser Source`.
+8. Enable `Local file`.
+9. Select `obs-projector-timer.html`.
+10. Set width/height to your OBS canvas, usually `1920 x 1080`.
 
 The setup script starts the auto-pause helper quietly in the background.
 
@@ -81,6 +82,30 @@ bathroom break
 
 When you return, it should resume.
 
+## What Is A Camera Index?
+
+A camera index is just the number OpenCV/Windows uses to open a camera-like device.
+
+Examples:
+
+```text
+0 = maybe your physical webcam
+1 = maybe OBS Virtual Camera
+2 = maybe another capture device
+```
+
+Windows does not always expose friendly camera names to OpenCV, and the order can change when OBS Virtual Camera starts or stops. That is why the setup script scans indexes and saves preview images.
+
+When `setup-auto-pause.bat` opens the `camera-previews` folder, pick the number in the image filename:
+
+```text
+camera-index-0.jpg
+camera-index-1.jpg
+camera-index-2.jpg
+```
+
+Choose the index whose preview shows the feed you want the helper to watch. If OBS is using your real webcam, start OBS Virtual Camera and choose the preview that shows the OBS Virtual Camera output.
+
 ## OBS Interact Controls
 
 Right-click the Browser Source in OBS and choose `Interact`.
@@ -108,8 +133,9 @@ If auto-pause does not work:
 
 1. In OBS, click `Start Virtual Camera`.
 2. Run `setup-auto-pause.bat`.
-3. Choose an available camera index.
-4. Run `check-status.bat`.
+3. Look at the preview images.
+4. Choose the index whose preview shows the right feed.
+5. Run `check-status.bat`.
 
 If `camera_ok` is false, choose another available camera index.
 

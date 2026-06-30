@@ -7,11 +7,14 @@ echo ======================================
 echo.
 echo 1. If OBS already uses your webcam, click "Start Virtual Camera" in OBS first.
 echo 2. This setup will scan camera indexes.
-echo 3. Type an available index, then it will save settings and start the helper quietly.
+echo 3. It also saves preview images for available camera indexes.
+echo 4. Pick the number whose preview image shows the camera feed you want.
 echo.
 pause
 echo.
-python "%~dp0auto_pause_helper.py" --scan
+python "%~dp0auto_pause_helper.py" --scan --save-previews 2>nul
+echo.
+if exist "%~dp0camera-previews" start "" "%~dp0camera-previews"
 echo.
 set /p CAMERA_INDEX=Type the camera index to use, then press Enter: 
 if "%CAMERA_INDEX%"=="" set CAMERA_INDEX=0
