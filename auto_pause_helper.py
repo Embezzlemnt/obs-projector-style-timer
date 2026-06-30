@@ -36,7 +36,7 @@ DEFAULT_SETTINGS = {
     "pause": 3.0,
     "resume": 0.5,
     "interval": 0.12,
-    "presence_threshold": 0.55,
+    "presence_threshold": 0.42,
 }
 
 
@@ -187,6 +187,15 @@ def skin_ratio(frame):
     return float(cv2.countNonZero(mask)) / float(mask.size)
 
 
+def looks_like_obs_standby(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    blue = cv2.inRange(hsv, (95, 35, 25), (135, 255, 230))
+    white = cv2.inRange(hsv, (0, 0, 170), (179, 55, 255))
+    blue_ratio = float(cv2.countNonZero(blue)) / float(blue.size)
+    white_ratio = float(cv2.countNonZero(white)) / float(white.size)
+    return blue_ratio > 0.62 and 0.006 < white_ratio < 0.08
+
+
 def detect_loop(args):
     face_cascades = [
         load_cascade("haarcascade_frontalface_default.xml"),
@@ -199,8 +208,10 @@ def detect_loop(args):
     active_camera = None
     last_seen = time.monotonic()
     last_missing = None
+    last_object_seen = 0.0
     present_since = time.monotonic()
     paused = False
+    smoothed_confidence = 0.0
 
     while True:
         if cap is None:
@@ -228,6 +239,8 @@ def detect_loop(args):
                     "camera": active_camera,
                     "error": "",
                 })
+            smoothed_confidence = 0.0
+            last_object_seen = time.monotonic()
 
         ok, frame = cap.read()
         now = time.monotonic()
@@ -246,6 +259,24 @@ def detect_loop(args):
             continue
 
         frame = resize_for_detection(frame)
+        if looks_like_obs_standby(frame):
+            with state_lock:
+                state.update({
+                    "camera_ok": False,
+                    "camera": active_camera,
+                    "paused": False,
+                    "presence": 0.0,
+                    "face_count": 0,
+                    "body_count": 0,
+                    "skin_ratio": 0.0,
+                    "last_seen_seconds": None,
+                    "error": "OBS Virtual Camera is showing its standby screen. Start OBS Virtual Camera on the scene with your camera feed.",
+                })
+            smoothed_confidence = 0.0
+            last_missing = None
+            time.sleep(args.interval)
+            continue
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
 
@@ -264,9 +295,26 @@ def detect_loop(args):
         body_count = len(bodies)
         face_presence = 1.0 if face_count else 0.0
         body_presence = 0.72 if body_count else 0.0
-        skin_presence = 0.24 if current_skin >= 0.035 else 0.0
-        confidence = clamp(max(face_presence, body_presence, skin_presence), 0.0, 1.0)
-        present = confidence >= args.presence_threshold
+        if face_count or body_count:
+            last_object_seen = now
+
+        if current_skin >= 0.09:
+            skin_presence = 0.48
+        elif current_skin >= 0.04:
+            skin_presence = 0.24
+        else:
+            skin_presence = 0.0
+
+        recent_object = now - last_object_seen < 1.45
+        continuity_presence = 0.50 if recent_object and skin_presence > 0 else 0.0
+        raw_confidence = clamp(max(face_presence, body_presence, skin_presence, continuity_presence), 0.0, 1.0)
+        smoothing = 0.62 if raw_confidence > smoothed_confidence else 0.22
+        smoothed_confidence = smoothed_confidence + (raw_confidence - smoothed_confidence) * smoothing
+        confidence = clamp(smoothed_confidence, 0.0, 1.0)
+
+        enter_threshold = args.presence_threshold
+        stay_threshold = max(0.28, args.presence_threshold - 0.16)
+        present = confidence >= enter_threshold or (last_missing is None and confidence >= stay_threshold)
 
         if present:
             if present_since is None:

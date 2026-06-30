@@ -818,6 +818,9 @@
             status.value = helperCameraOk
               ? `${paused ? "paused" : "running"} | helper ok | presence ${Number(data.presence || 0).toFixed(2)}`
               : `helper online | ${data.error || "camera unavailable"}`;
+            if (!helperCameraOk && !manualPause) {
+              setPaused(false, "helper waiting");
+            }
           } catch (_) {
             helperOnline = false;
             helperCameraOk = false;

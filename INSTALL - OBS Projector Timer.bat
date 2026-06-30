@@ -41,7 +41,7 @@ if errorlevel 1 (
   )
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path '%~dp0' 'timer-helper-settings.json'; if (Test-Path -LiteralPath $p) { $j = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json } else { $j = [pscustomobject]@{} }; $j | Add-Member -NotePropertyName camera -NotePropertyValue 'auto' -Force; $j | Add-Member -NotePropertyName port -NotePropertyValue 8765 -Force; $j | Add-Member -NotePropertyName pause -NotePropertyValue 3.0 -Force; $j | Add-Member -NotePropertyName resume -NotePropertyValue 0.5 -Force; $j | Add-Member -NotePropertyName interval -NotePropertyValue 0.12 -Force; $j | Add-Member -NotePropertyName presence_threshold -NotePropertyValue 0.55 -Force; $j | ConvertTo-Json | Set-Content -LiteralPath $p -Encoding UTF8"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path '%~dp0' 'timer-helper-settings.json'; if (Test-Path -LiteralPath $p) { $j = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json } else { $j = [pscustomobject]@{} }; $j | Add-Member -NotePropertyName camera -NotePropertyValue 'auto' -Force; $j | Add-Member -NotePropertyName port -NotePropertyValue 8765 -Force; $j | Add-Member -NotePropertyName pause -NotePropertyValue 3.0 -Force; $j | Add-Member -NotePropertyName resume -NotePropertyValue 0.5 -Force; $j | Add-Member -NotePropertyName interval -NotePropertyValue 0.12 -Force; $j | Add-Member -NotePropertyName presence_threshold -NotePropertyValue 0.42 -Force; $j | ConvertTo-Json | Set-Content -LiteralPath $p -Encoding UTF8"
 
 call "%~dp0stop-helper.bat" >nul 2>nul
 
